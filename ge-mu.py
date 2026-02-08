@@ -145,28 +145,30 @@ class Gameobject:
         
         ##### ステージ0 #####
         
-        # クリアフラグ（ステージ0）
-        self.clear_up = True
-        self.clear_down = True
-        self.clear_left = True
-        self.clear_right = True
+        # クリアフラグの代わりにアルファ値でフェード管理
+        self.alpha_up = 255
+        self.alpha_down = 255
+        self.alpha_left = 255
+        self.alpha_right = 255
+        self.alpha_text = 255
+        self.fade_speed = 5
         
-        self.text_jaobject_0 = self.font_jaobject_0.render("移動せよ", True, (0, 0, 0))
+        self.text_jaobject_0 = self.font_jaobject_0.render("移動せよ", True, (0, 0, 0)).convert_alpha()
         self.rect_ja = self.text_jaobject_0.get_rect(center=screen_rect.center)
         
-        self.text_enobject_0 = self.font_enobject_0.render("Move", True, (0, 0, 0))
+        self.text_enobject_0 = self.font_enobject_0.render("Move", True, (0, 0, 0)).convert_alpha()
         self.rect_en = self.text_enobject_0.get_rect(center=(screen_rect.centerx, screen_rect.centery + 40))
         
-        self.sym_object_0_1 = self.font_enobject_0.render("↑", True, (0, 0, 0))  
+        self.sym_object_0_1 = self.font_enobject_0.render("↑", True, (0, 0, 0)).convert_alpha()  
         self.rect_sym_0_1 = self.sym_object_0_1.get_rect(center=(screen_rect.centerx, screen_rect.centery - 120))
         
-        self.sym_object_0_2 = self.font_enobject_0.render("↓", True, (0, 0, 0))  
+        self.sym_object_0_2 = self.font_enobject_0.render("↓", True, (0, 0, 0)).convert_alpha()  
         self.rect_sym_0_2 = self.sym_object_0_2.get_rect(center=(screen_rect.centerx, screen_rect.centery + 120))
         
-        self.sym_object_0_3 = self.font_enobject_0.render("←", True, (0, 0, 0))  
+        self.sym_object_0_3 = self.font_enobject_0.render("←", True, (0, 0, 0)).convert_alpha()  
         self.rect_sym_0_3 = self.sym_object_0_3.get_rect(center=(screen_rect.centerx - 120, screen_rect.centery))
         
-        self.sym_object_0_4 = self.font_enobject_0.render("→", True, (0, 0, 0))
+        self.sym_object_0_4 = self.font_enobject_0.render("→", True, (0, 0, 0)).convert_alpha()
         self.rect_sym_0_4 = self.sym_object_0_4.get_rect(center=(screen_rect.centerx + 120, screen_rect.centery))
         
         #################
@@ -174,19 +176,36 @@ class Gameobject:
     # ステージ0
     def draw_object_0(self, screen, count_key, min_clear_move):
        
-        if count_key[0] > min_clear_move and self.clear_left: self.clear_left = False
-        if count_key[1] > min_clear_move and self.clear_right: self.clear_right = False
-        if count_key[2] > min_clear_move and self.clear_up: self.clear_up = False
-        if count_key[3] > min_clear_move and self.clear_down: self.clear_down = False
+        # キー入力カウントチェックとアルファ値更新
+        if count_key[0] > min_clear_move: self.alpha_left = max(0, self.alpha_left - self.fade_speed)
+        if count_key[1] > min_clear_move: self.alpha_right = max(0, self.alpha_right - self.fade_speed)
+        if count_key[2] > min_clear_move: self.alpha_up = max(0, self.alpha_up - self.fade_speed)
+        if count_key[3] > min_clear_move: self.alpha_down = max(0, self.alpha_down - self.fade_speed)
         
-        if self.clear_up: screen.blit(self.sym_object_0_1, self.rect_sym_0_1)
-        if self.clear_down: screen.blit(self.sym_object_0_2, self.rect_sym_0_2)
-        if self.clear_left: screen.blit(self.sym_object_0_3, self.rect_sym_0_3)
-        if self.clear_right: screen.blit(self.sym_object_0_4, self.rect_sym_0_4)
+        # 矢印描画
+        if self.alpha_up > 0:
+            self.sym_object_0_1.set_alpha(self.alpha_up)
+            screen.blit(self.sym_object_0_1, self.rect_sym_0_1)
+        if self.alpha_down > 0:
+            self.sym_object_0_2.set_alpha(self.alpha_down)
+            screen.blit(self.sym_object_0_2, self.rect_sym_0_2)
+        if self.alpha_left > 0:
+            self.sym_object_0_3.set_alpha(self.alpha_left)
+            screen.blit(self.sym_object_0_3, self.rect_sym_0_3)
+        if self.alpha_right > 0:
+            self.sym_object_0_4.set_alpha(self.alpha_right)
+            screen.blit(self.sym_object_0_4, self.rect_sym_0_4)
         
-        if (self.clear_up == True or self.clear_down == True or self.clear_left == True or self.clear_right == True):
+        # 矢印が全部消えたらテキストもフェードアウト
+        if self.alpha_up == 0 and self.alpha_down == 0 and self.alpha_left == 0 and self.alpha_right == 0:
+            self.alpha_text = max(0, self.alpha_text - self.fade_speed)
+            
+        if self.alpha_text > 0:
+            self.text_jaobject_0.set_alpha(self.alpha_text)
+            self.text_enobject_0.set_alpha(self.alpha_text)
             screen.blit(self.text_jaobject_0, self.rect_ja)
             screen.blit(self.text_enobject_0, self.rect_en)
+            
         
 # ゲーム本体
 class mainGame:
@@ -197,23 +216,26 @@ class mainGame:
         self.player = Player()
         self.background = Background()
         self.object = Gameobject(self.background.screen)
-        
+    
+    # ステージ0（チュートリアル）
     def run_0(self):
         
-        Clear_0 = True
-        
-        min_clear_move = 20
+        Clear_0 = True          # クリアフラグ
+
+        min_clear_move = 20     # クリアに必要な移動量の最小値
         
         while Clear_0:
             
+            # 背景を描画する
             self.background.draw_background_0()
             
+            # オブジェクトとプレイヤーを描画する
             self.player.draw(self.background.screen, 0)
             self.object.draw_object_0(self.background.screen, self.player.count_key, min_clear_move)
             
+            # 等加速度運動を行う
             keys = pygame.key.get_pressed()
             self.player.move_ice(keys)
-            
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
