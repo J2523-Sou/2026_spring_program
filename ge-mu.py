@@ -10,11 +10,17 @@ class Player:
         
         player = pygame.Rect(400, 300, 50, 50)  # 初期位置
         self.player = player                    # プレイヤーの情報
-        self.count_key = [0, 0, 0, 0]           # 上下左右のキー入力カウント
+        self.delta = [0, 0, 0, 0]           # 上下左右のキー入力カウント
+        self.delta = [0, 0, 0, 0]               # 移動量（変化量）
+        self.key_info = [pygame.K_LEFT, 
+                         pygame.K_RIGHT, 
+                         pygame.K_UP, 
+                         pygame.K_DOWN]         # キー情報
         self.count_time = 0                     # 時間カウント
         self.speed = 5                          # 移動速度
-        self.accel_gain = 1.5                   # 当加速度運動時の加速度（加速）
-        self.brake_gain = 0.4                   # 当加速度運動時の加速度（減速）
+        self.accel_gain = 1.5                   # 等加速度運動時の加速度（加速）
+        self.brake_gain = 0.4                   # 等加速度運動時の加速度（減速）
+        self.speed_limit = 25                   # 等加速度運動時の速度上限  
         self.move_gain = 0.1                    # 移動倍率
         self.radius = player.width // 2         # 円の半径
     
@@ -28,7 +34,7 @@ class Player:
         else:
             pygame.draw.circle(screen, (0, 0, 255), self.player.center, self.radius)
     
-    # マウス追従（テスト中）
+    # マウス追従（テスト中）←多分間に合わない！！
     def track_mouse(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         player_x, player_y = self.player.center
@@ -36,13 +42,13 @@ class Player:
         dy = mouse_y - player_y
         
         if dx < 0:
-            self.count_key[1] = dx * 0.05
+            self.delta[1] = dx * 0.05
         elif dx > 0:
-            self.count_key[0] = dx * -1 * 0.05
+            self.delta[0] = dx * -1 * 0.05
         if dy < 0:
-            self.count_key[3] = dy * 0.05
+            self.delta[3] = dy * 0.05
         elif dy > 0:
-            self.count_key[2] = dy * -1 * 0.05
+            self.delta[2] = dy * -1 * 0.05
     
     # 端でワープするよ
     def warp(self, screen_rect):
@@ -72,36 +78,49 @@ class Player:
     
     # 等加速度運動
     def move_ice(self, keys, enable_warp = True):
-        if keys[pygame.K_LEFT]:
-            self.count_key[0] += self.accel_gain
-        if keys[pygame.K_RIGHT]:
-            self.count_key[1] += self.accel_gain
-        if keys[pygame.K_UP]:
-            self.count_key[2] += self.accel_gain
-        if keys[pygame.K_DOWN]:
-            self.count_key[3] += self.accel_gain
-
-        if not keys[pygame.K_LEFT] and self.count_key[0] > 0:
-            self.count_key[0] -= self.brake_gain
-        if not keys[pygame.K_RIGHT] and self.count_key[1] > 0:
-            self.count_key[1] -= self.brake_gain
-        if not keys[pygame.K_UP] and self.count_key[2] > 0:
-            self.count_key[2] -= self.brake_gain
-        if not keys[pygame.K_DOWN] and self.count_key[3] > 0:
-            self.count_key[3] -= self.brake_gain
-            
-        if self.count_key[0] > 0:
-            self.player.x -= self.count_key[0] ** 2 * self.move_gain
-        if self.count_key[1] > 0:
-            self.player.x += self.count_key[1] ** 2 * self.move_gain
-        if self.count_key[2] > 0:
-            self.player.y -= self.count_key[2] ** 2 * self.move_gain
-        if self.count_key[3] > 0:
-            self.player.y += self.count_key[3] ** 2 * self.move_gain
-
+        
         for i in range(4):
-            if self.count_key[i] < 0:
-                self.count_key[i] = 0
+            
+            if keys[self.key_info[i]]:
+                self.delta[i] += self.accel_gain
+                #self.delta[i] += self.accel_gain
+                
+            if not keys[self.key_info[i]] and self.delta[i] > 0:
+                self.delta[i] -= self.brake_gain
+                #self.delta[i] += self.brake_gain
+                
+            if self.delta[i] < 0:
+                self.delta[i] = 0
+                
+            if self.delta[i] > self.speed_limit:
+                self.delta[i] = self.speed_limit
+        
+        # if keys[pygame.K_LEFT]:
+        #     self.delta[0] += self.accel_gain
+        # if keys[pygame.K_RIGHT]:
+        #     self.delta[1] += self.accel_gain
+        # if keys[pygame.K_UP]:
+        #     self.delta[2] += self.accel_gain
+        # if keys[pygame.K_DOWN]:
+        #     self.delta[3] += self.accel_gain
+
+        # if not keys[pygame.K_LEFT] and self.delta[0] > 0:
+        #     self.delta[0] -= self.brake_gain
+        # if not keys[pygame.K_RIGHT] and self.delta[1] > 0:
+        #     self.delta[1] -= self.brake_gain
+        # if not keys[pygame.K_UP] and self.delta[2] > 0:
+        #     self.delta[2] -= self.brake_gain
+        # if not keys[pygame.K_DOWN] and self.delta[3] > 0:
+        #     self.delta[3] -= self.brake_gain
+            
+        if self.delta[0] > 0:
+            self.player.x -= self.delta[0] ** 2 * self.move_gain
+        if self.delta[1] > 0:
+            self.player.x += self.delta[1] ** 2 * self.move_gain
+        if self.delta[2] > 0:
+            self.player.y -= self.delta[2] ** 2 * self.move_gain
+        if self.delta[3] > 0:
+            self.player.y += self.delta[3] ** 2 * self.move_gain            
 
         if enable_warp: self.warp(pygame.display.get_surface().get_rect())
         
@@ -174,13 +193,13 @@ class Gameobject:
         #################
 
     # ステージ0
-    def draw_object_0(self, screen, count_key, min_clear_move):
+    def draw_object_0(self, screen, delta, min_clear_move):
        
         # キー入力カウントチェックとアルファ値更新
-        if count_key[0] > min_clear_move: self.alpha_left = max(0, self.alpha_left - self.fade_speed)
-        if count_key[1] > min_clear_move: self.alpha_right = max(0, self.alpha_right - self.fade_speed)
-        if count_key[2] > min_clear_move: self.alpha_up = max(0, self.alpha_up - self.fade_speed)
-        if count_key[3] > min_clear_move: self.alpha_down = max(0, self.alpha_down - self.fade_speed)
+        if delta[0] > min_clear_move: self.alpha_left = max(0, self.alpha_left - self.fade_speed)
+        if delta[1] > min_clear_move: self.alpha_right = max(0, self.alpha_right - self.fade_speed)
+        if delta[2] > min_clear_move: self.alpha_up = max(0, self.alpha_up - self.fade_speed)
+        if delta[3] > min_clear_move: self.alpha_down = max(0, self.alpha_down - self.fade_speed)
         
         # 矢印描画
         if self.alpha_up > 0:
@@ -197,9 +216,9 @@ class Gameobject:
             screen.blit(self.sym_object_0_4, self.rect_sym_0_4)
         
         # 矢印が全部消えたらテキストもフェードアウト
-        if self.alpha_up == 0 and self.alpha_down == 0 and self.alpha_left == 0 and self.alpha_right == 0:
+        if self.alpha_up <= 0 and self.alpha_down <= 0 and self.alpha_left <= 0 and self.alpha_right <= 0:
             self.alpha_text = max(0, self.alpha_text - self.fade_speed)
-            
+        
         if self.alpha_text > 0:
             self.text_jaobject_0.set_alpha(self.alpha_text)
             self.text_enobject_0.set_alpha(self.alpha_text)
@@ -212,6 +231,7 @@ class mainGame:
     
     def __init__(self):
         
+        # 各クラスから使いたい材料を取ってくる
         self.clock = pygame.time.Clock()
         self.player = Player()
         self.background = Background()
@@ -224,6 +244,7 @@ class mainGame:
 
         min_clear_move = 20     # クリアに必要な移動量の最小値
         
+        # クリアするまで繰り返す
         while Clear_0:
             
             # 背景を描画する
@@ -231,12 +252,13 @@ class mainGame:
             
             # オブジェクトとプレイヤーを描画する
             self.player.draw(self.background.screen, 0)
-            self.object.draw_object_0(self.background.screen, self.player.count_key, min_clear_move)
+            self.object.draw_object_0(self.background.screen, self.player.delta, min_clear_move)
             
             # 等加速度運動を行う
             keys = pygame.key.get_pressed()
             self.player.move_ice(keys)
             
+            # 退出イベント
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -247,10 +269,9 @@ class mainGame:
             self.clock.tick(60)
 
 
-# 各クラス呼び出し
+# 各クラス呼び出し（本体）
 if __name__ == "__main__":
     pygame.init()
     game = mainGame()
     
     game.run_0()
-
