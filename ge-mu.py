@@ -27,7 +27,7 @@ class Player:
     # 描画 
     def draw(self, screen, enable_shaking = False):
 
-        # 震えるアニメーションが有効なら
+        # 震えるアニメーションが有効なら半径をsin波的に動かす
         if enable_shaking:
             self.count_time += 1
             pygame.draw.circle(screen, (0, 0, 255), self.player.center, math.sin(self.count_time * 0.1) * 7 + self.radius)
@@ -76,8 +76,8 @@ class Player:
         
         if enable_warp: self.warp(pygame.display.get_surface().get_rect())
     
-    # 等加速度運動
-    def move_ice(self, keys, enable_warp = True):
+    # 等加速度運動（第3引数ではワープするか，第4引数では当たり判定を）
+    def move_ice(self, keys, enable_warp = True, walls = None):
         
         for i in range(4):
             
@@ -94,33 +94,44 @@ class Player:
                 
             if self.count_key[i] > self.speed_limit:
                 self.count_key[i] = self.speed_limit
-        
-        # if keys[pygame.K_LEFT]:
-        #     self.count_key[0] += self.accel_gain
-        # if keys[pygame.K_RIGHT]:
-        #     self.count_key[1] += self.accel_gain
-        # if keys[pygame.K_UP]:
-        #     self.count_key[2] += self.accel_gain
-        # if keys[pygame.K_DOWN]:
-        #     self.count_key[3] += self.accel_gain
-
-        # if not keys[pygame.K_LEFT] and self.count_key[0] > 0:
-        #     self.count_key[0] -= self.brake_gain
-        # if not keys[pygame.K_RIGHT] and self.count_key[1] > 0:
-        #     self.count_key[1] -= self.brake_gain
-        # if not keys[pygame.K_UP] and self.count_key[2] > 0:
-        #     self.count_key[2] -= self.brake_gain
-        # if not keys[pygame.K_DOWN] and self.count_key[3] > 0:
-        #     self.count_key[3] -= self.brake_gain
             
+        move_x = 0
+        move_y = 0
+        
         if self.count_key[0] > 0:
-            self.player.x -= self.count_key[0] ** 2 * self.move_gain
+            move_x -= self.count_key[0] ** 2 * self.move_gain
         if self.count_key[1] > 0:
-            self.player.x += self.count_key[1] ** 2 * self.move_gain
+            move_x += self.count_key[1] ** 2 * self.move_gain
         if self.count_key[2] > 0:
-            self.player.y -= self.count_key[2] ** 2 * self.move_gain
+            move_y -= self.count_key[2] ** 2 * self.move_gain
         if self.count_key[3] > 0:
-            self.player.y += self.count_key[3] ** 2 * self.move_gain            
+            move_y += self.count_key[3] ** 2 * self.move_gain
+
+        self.player.x += int(move_x)
+        
+        # 当たり判定有の処理
+        if walls:
+            for wall in walls:
+                if self.player.colliderect(wall):
+                    if move_x > 0:
+                        self.player.right = wall.left
+                        self.count_key[1] = 0
+                    elif move_x < 0:
+                        self.player.left = wall.right
+                        self.count_key[0] = 0
+
+        self.player.y += int(move_y)
+
+        # 当たり判定有の処理        
+        if walls:
+            for wall in walls:
+                if self.player.colliderect(wall):
+                    if move_y > 0:
+                        self.player.bottom = wall.top
+                        self.count_key[3] = 0
+                    elif move_y < 0:
+                        self.player.top = wall.bottom
+                        self.count_key[2] = 0
 
         if enable_warp: self.warp(pygame.display.get_surface().get_rect())
         
@@ -136,6 +147,10 @@ class Background:
         self.font_P = pygame.font.SysFont("arial", 24)            # フォント設定
         self.screen = screen                                           # 背景インスタンス
         
+        self.init_background_0()
+        
+        
+    def init_background_0(self):
         self.text_location_0 = self.font_H.render("0", True, (0, 0, 0))  # テキスト設定
         self.text_jamission_0 = self.font_H.render("チュートリアル", True, (0, 0, 0))  # テキスト設定
         self.text_enmission_0 = self.font_P.render("Tutorial", True, (0, 0, 0))  # テキスト設定
@@ -147,6 +162,21 @@ class Background:
         self.screen.blit(self.text_location_0, (50, 50))            # テキスト描画
         self.screen.blit(self.text_jamission_0, (100, 50))          # テキスト描画
         self.screen.blit(self.text_enmission_0, (400, 55))          # テキスト描画
+    
+    def init_background_1(self):
+        
+        self.text_location_1 = self.font_H.render("1", True, (0, 0, 0))  # テキスト設定
+        self.text_jamission_1 = self.font_H.render("たどり着け", True, (0, 0, 0))  # テキスト設定
+        self.text_enmission_1 = self.font_P.render("Arrive", True, (0, 0, 0))  # テキスト設定
+    
+    def draw_background_1(self):
+        
+        self.screen.fill((255, 255, 255))                           # 画面描画
+        self.screen.blit(self.text_location_1, (50, 50))            # テキスト描画
+        self.screen.blit(self.text_jamission_1, (100, 50))          # テキスト描画
+        self.screen.blit(self.text_enmission_1, (400, 55))          # テキスト描画
+    
+    
 
 # オブジェクトたち     
 class Gameobject:
@@ -166,6 +196,7 @@ class Gameobject:
         self.clear_wait_count = 0
         
         self.fade_speed = 5
+        
         self.init_object_0()
             
     def init_object_0(self):
@@ -235,7 +266,62 @@ class Gameobject:
             screen.blit(self.text_enobject_0, self.rect_en)
 
         return 1
-            
+    
+    def init_object_1(self):
+        
+        # 文字マップ: #=壁, .=通路, S=スタート, G=ゴール
+        maze_map = [
+            "##################",
+            "#S..#........#...#",
+            "#.#.#.######.#.#.#",
+            "#.#...#....#...#.#",
+            "#.#####.##.#####.#",
+            "#.....#..#.....#.#",
+            "###.#.####.###.#.#",
+            "#...#......#...#.#",
+            "#.##########.###.#",
+            "#...............G#",
+            "##################",
+        ]
+
+        tile = 75
+        rows = len(maze_map)
+        cols = len(maze_map[0])
+        maze_width = cols * tile
+        maze_height = rows * tile
+        left = self.screen_rect.centerx - maze_width // 2
+        top = self.screen_rect.centery - maze_height // 2 + 40
+
+        self.maze_walls = []
+        self.goal_rect = pygame.Rect(left, top, tile, tile)
+        self.start_pos = (left + tile // 2, top + tile // 2)
+
+        for row_idx, row in enumerate(maze_map):
+            for col_idx, cell in enumerate(row):
+                x = left + col_idx * tile
+                y = top + row_idx * tile
+                rect = pygame.Rect(x, y, tile, tile)
+                if cell == "#":
+                    self.maze_walls.append(rect)
+                elif cell == "S":
+                    self.start_pos = rect.center
+                elif cell == "G":
+                    self.goal_rect = rect.inflate(-16, -16)
+
+    def draw_object_1(self, screen, player_rect):
+        
+        # 迷路の壁を描画
+        for rect in self.maze_walls:
+            pygame.draw.rect(screen, (20, 20, 20), rect)
+
+        # ゴールを描画
+        pygame.draw.rect(screen, (0, 180, 0), self.goal_rect)
+
+        # プレイヤーがゴールに触れたらクリア
+        if player_rect.colliderect(self.goal_rect):
+            return 0
+
+        return 1
         
 # ゲーム本体
 class mainGame:
@@ -244,12 +330,25 @@ class mainGame:
         
         # 各クラスから使いたい材料を取ってくる
         self.clock = pygame.time.Clock()
+        
+        
+    def init_run_0(self):
+        
         self.player = Player()
         self.background = Background()
         self.object = Gameobject(self.background.screen)
     
+    def init_run1(self):
+        
+        self.player = Player()
+        self.background = Background()
+        self.object = Gameobject(self.background.screen)
+        
+    
     # ステージ0（チュートリアル）
     def run_0(self):
+        
+        self.init_run_0()
         
         Clear_0 = True          # クリアフラグ
 
@@ -263,11 +362,45 @@ class mainGame:
             
             # オブジェクトとプレイヤーを描画する
             self.player.draw(self.background.screen, 0)
+            # オブジェクト描画時にクリア判定も一緒に行う（あんまりよくない設計な気がする．．．）
             Clear_0 = self.object.draw_object_0(self.background.screen, self.player.delta, min_clear_move)
             
             # 等加速度運動を行う
             keys = pygame.key.get_pressed()
             self.player.move_ice(keys)
+            
+            # 退出イベント
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                    
+            pygame.display.flip()
+            
+            self.clock.tick(60)
+    
+    def run_1(self):
+        
+        self.init_run1()
+        
+        Clear_1 = True          # クリアフラグ
+        self.background.init_background_1()
+        self.object.init_object_1()
+        self.player.player.center = self.object.start_pos
+        self.player.count_key = [0, 0, 0, 0]
+        self.player.delta = [0, 0, 0, 0]
+        
+        while Clear_1:
+            # 背景を描画する
+            self.background.draw_background_1()
+            
+            # オブジェクトとプレイヤーを描画する
+            Clear_1 = self.object.draw_object_1(self.background.screen, self.player.player)
+            self.player.draw(self.background.screen, 0)
+            
+            # 等加速度運動を行う
+            keys = pygame.key.get_pressed()
+            self.player.move_ice(keys, enable_warp = False, walls = self.object.maze_walls)
             
             # 退出イベント
             for event in pygame.event.get():
@@ -286,3 +419,4 @@ if __name__ == "__main__":
     game = mainGame()
     
     game.run_0()
+    game.run_1()
