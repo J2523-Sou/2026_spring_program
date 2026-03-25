@@ -10,7 +10,7 @@ class Player:
         
         player = pygame.Rect(400, 300, 50, 50)  # 初期位置
         self.player = player                    # プレイヤーの情報
-        self.delta = [0, 0, 0, 0]           # 上下左右のキー入力カウント
+        self.count_key = [0, 0, 0, 0]           # 上下左右のキー入力カウント
         self.delta = [0, 0, 0, 0]               # 移動量（変化量）
         self.key_info = [pygame.K_LEFT, 
                          pygame.K_RIGHT, 
@@ -42,13 +42,13 @@ class Player:
         dy = mouse_y - player_y
         
         if dx < 0:
-            self.delta[1] = dx * 0.05
+            self.count_key[1] = dx * 0.05
         elif dx > 0:
-            self.delta[0] = dx * -1 * 0.05
+            self.count_key[0] = dx * -1 * 0.05
         if dy < 0:
-            self.delta[3] = dy * 0.05
+            self.count_key[3] = dy * 0.05
         elif dy > 0:
-            self.delta[2] = dy * -1 * 0.05
+            self.count_key[2] = dy * -1 * 0.05
     
     # 端でワープするよ
     def warp(self, screen_rect):
@@ -82,45 +82,45 @@ class Player:
         for i in range(4):
             
             if keys[self.key_info[i]]:
+                self.count_key[i] += self.accel_gain
                 self.delta[i] += self.accel_gain
-                #self.delta[i] += self.accel_gain
                 
-            if not keys[self.key_info[i]] and self.delta[i] > 0:
-                self.delta[i] -= self.brake_gain
-                #self.delta[i] += self.brake_gain
+            if not keys[self.key_info[i]] and self.count_key[i] > 0:
+                self.count_key[i] -= self.brake_gain
+                self.delta[i] += self.brake_gain
                 
-            if self.delta[i] < 0:
-                self.delta[i] = 0
+            if self.count_key[i] < 0:
+                self.count_key[i] = 0
                 
-            if self.delta[i] > self.speed_limit:
-                self.delta[i] = self.speed_limit
+            if self.count_key[i] > self.speed_limit:
+                self.count_key[i] = self.speed_limit
         
         # if keys[pygame.K_LEFT]:
-        #     self.delta[0] += self.accel_gain
+        #     self.count_key[0] += self.accel_gain
         # if keys[pygame.K_RIGHT]:
-        #     self.delta[1] += self.accel_gain
+        #     self.count_key[1] += self.accel_gain
         # if keys[pygame.K_UP]:
-        #     self.delta[2] += self.accel_gain
+        #     self.count_key[2] += self.accel_gain
         # if keys[pygame.K_DOWN]:
-        #     self.delta[3] += self.accel_gain
+        #     self.count_key[3] += self.accel_gain
 
-        # if not keys[pygame.K_LEFT] and self.delta[0] > 0:
-        #     self.delta[0] -= self.brake_gain
-        # if not keys[pygame.K_RIGHT] and self.delta[1] > 0:
-        #     self.delta[1] -= self.brake_gain
-        # if not keys[pygame.K_UP] and self.delta[2] > 0:
-        #     self.delta[2] -= self.brake_gain
-        # if not keys[pygame.K_DOWN] and self.delta[3] > 0:
-        #     self.delta[3] -= self.brake_gain
+        # if not keys[pygame.K_LEFT] and self.count_key[0] > 0:
+        #     self.count_key[0] -= self.brake_gain
+        # if not keys[pygame.K_RIGHT] and self.count_key[1] > 0:
+        #     self.count_key[1] -= self.brake_gain
+        # if not keys[pygame.K_UP] and self.count_key[2] > 0:
+        #     self.count_key[2] -= self.brake_gain
+        # if not keys[pygame.K_DOWN] and self.count_key[3] > 0:
+        #     self.count_key[3] -= self.brake_gain
             
-        if self.delta[0] > 0:
-            self.player.x -= self.delta[0] ** 2 * self.move_gain
-        if self.delta[1] > 0:
-            self.player.x += self.delta[1] ** 2 * self.move_gain
-        if self.delta[2] > 0:
-            self.player.y -= self.delta[2] ** 2 * self.move_gain
-        if self.delta[3] > 0:
-            self.player.y += self.delta[3] ** 2 * self.move_gain            
+        if self.count_key[0] > 0:
+            self.player.x -= self.count_key[0] ** 2 * self.move_gain
+        if self.count_key[1] > 0:
+            self.player.x += self.count_key[1] ** 2 * self.move_gain
+        if self.count_key[2] > 0:
+            self.player.y -= self.count_key[2] ** 2 * self.move_gain
+        if self.count_key[3] > 0:
+            self.player.y += self.count_key[3] ** 2 * self.move_gain            
 
         if enable_warp: self.warp(pygame.display.get_surface().get_rect())
         
@@ -155,46 +155,49 @@ class Gameobject:
     def __init__(self, screen):
         
         # ウインドウの中心座標取得
-        screen_rect = screen.get_rect()
-        self.center_x, self.center_y = screen_rect.center
+        self.screen_rect = screen.get_rect()
+        self.center_x, self.center_y = self.screen_rect.center
         
         # テキストのフォント
         self.font_jaobject_0 = pygame.font.SysFont("msgothic", 40)
         self.font_enobject_0 = pygame.font.SysFont("arial", 30)
         
-        ##### ステージ0 #####
+        self.clear_wait_frames = 30     # ステージクリア後の待機秒数
+        self.clear_wait_count = 0
         
-        # クリアフラグの代わりにアルファ値でフェード管理
+        self.fade_speed = 5
+        self.init_object_0()
+            
+    def init_object_0(self):
+        
         self.alpha_up = 255
         self.alpha_down = 255
         self.alpha_left = 255
         self.alpha_right = 255
         self.alpha_text = 255
-        self.fade_speed = 5
+        self.clear_wait_count = 0
         
         self.text_jaobject_0 = self.font_jaobject_0.render("移動せよ", True, (0, 0, 0)).convert_alpha()
-        self.rect_ja = self.text_jaobject_0.get_rect(center=screen_rect.center)
+        self.rect_ja = self.text_jaobject_0.get_rect(center=self.screen_rect.center)
         
         self.text_enobject_0 = self.font_enobject_0.render("Move", True, (0, 0, 0)).convert_alpha()
-        self.rect_en = self.text_enobject_0.get_rect(center=(screen_rect.centerx, screen_rect.centery + 40))
+        self.rect_en = self.text_enobject_0.get_rect(center=(self.screen_rect.centerx, self.screen_rect.centery + 40))
         
         self.sym_object_0_1 = self.font_enobject_0.render("↑", True, (0, 0, 0)).convert_alpha()  
-        self.rect_sym_0_1 = self.sym_object_0_1.get_rect(center=(screen_rect.centerx, screen_rect.centery - 120))
+        self.rect_sym_0_1 = self.sym_object_0_1.get_rect(center=(self.screen_rect.centerx, self.screen_rect.centery - 120))
         
         self.sym_object_0_2 = self.font_enobject_0.render("↓", True, (0, 0, 0)).convert_alpha()  
-        self.rect_sym_0_2 = self.sym_object_0_2.get_rect(center=(screen_rect.centerx, screen_rect.centery + 120))
+        self.rect_sym_0_2 = self.sym_object_0_2.get_rect(center=(self.screen_rect.centerx, self.screen_rect.centery + 120))
         
         self.sym_object_0_3 = self.font_enobject_0.render("←", True, (0, 0, 0)).convert_alpha()  
-        self.rect_sym_0_3 = self.sym_object_0_3.get_rect(center=(screen_rect.centerx - 120, screen_rect.centery))
+        self.rect_sym_0_3 = self.sym_object_0_3.get_rect(center=(self.screen_rect.centerx - 120, self.screen_rect.centery))
         
         self.sym_object_0_4 = self.font_enobject_0.render("→", True, (0, 0, 0)).convert_alpha()
-        self.rect_sym_0_4 = self.sym_object_0_4.get_rect(center=(screen_rect.centerx + 120, screen_rect.centery))
-        
-        #################
+        self.rect_sym_0_4 = self.sym_object_0_4.get_rect(center=(self.screen_rect.centerx + 120, self.screen_rect.centery))
 
     # ステージ0
     def draw_object_0(self, screen, delta, min_clear_move):
-       
+
         # キー入力カウントチェックとアルファ値更新
         if delta[0] > min_clear_move: self.alpha_left = max(0, self.alpha_left - self.fade_speed)
         if delta[1] > min_clear_move: self.alpha_right = max(0, self.alpha_right - self.fade_speed)
@@ -215,15 +218,23 @@ class Gameobject:
             self.sym_object_0_4.set_alpha(self.alpha_right)
             screen.blit(self.sym_object_0_4, self.rect_sym_0_4)
         
-        # 矢印が全部消えたらテキストもフェードアウト
+        # 矢印が全部消えたらテキストをフェードアウトし、少し待ってからクリア
         if self.alpha_up <= 0 and self.alpha_down <= 0 and self.alpha_left <= 0 and self.alpha_right <= 0:
             self.alpha_text = max(0, self.alpha_text - self.fade_speed)
-        
+            if self.alpha_text <= 0:
+                self.clear_wait_count += 1
+                if self.clear_wait_count >= self.clear_wait_frames:
+                    return 0  # ステージクリア
+            else:
+                self.clear_wait_count = 0
+
         if self.alpha_text > 0:
             self.text_jaobject_0.set_alpha(self.alpha_text)
             self.text_enobject_0.set_alpha(self.alpha_text)
             screen.blit(self.text_jaobject_0, self.rect_ja)
             screen.blit(self.text_enobject_0, self.rect_en)
+
+        return 1
             
         
 # ゲーム本体
@@ -252,7 +263,7 @@ class mainGame:
             
             # オブジェクトとプレイヤーを描画する
             self.player.draw(self.background.screen, 0)
-            self.object.draw_object_0(self.background.screen, self.player.delta, min_clear_move)
+            Clear_0 = self.object.draw_object_0(self.background.screen, self.player.delta, min_clear_move)
             
             # 等加速度運動を行う
             keys = pygame.key.get_pressed()
