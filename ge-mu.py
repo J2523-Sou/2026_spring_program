@@ -141,13 +141,19 @@ class Background:
     
     # 背景コンストラクタ
     def __init__(self):
-        
-        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)    # ウインドウサイズ指定
+
+        display_info = pygame.display.Info()
+        window_w = max(960, display_info.current_w - 60)
+        window_h = max(640, display_info.current_h - 60)
+        screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
+        pygame.display.set_caption("2026 spring program")
         self.font_H = pygame.font.SysFont("msgothic", 32)            # フォント設定
         self.font_P = pygame.font.SysFont("arial", 24)            # フォント設定
         self.screen = screen                                           # 背景インスタンス
         
         self.init_background_0()
+        self.init_background_1()
+        self.init_background_2()
         
         
     def init_background_0(self):
@@ -175,6 +181,19 @@ class Background:
         self.screen.blit(self.text_location_1, (50, 50))            # テキスト描画
         self.screen.blit(self.text_jamission_1, (100, 50))          # テキスト描画
         self.screen.blit(self.text_enmission_1, (400, 55))          # テキスト描画
+        
+    def init_background_2(self):
+        
+        self.text_location_2 = self.font_H.render("2", True, (0, 0, 0))  # テキスト設定
+        self.text_jamission_2 = self.font_H.render("ここから退出しろ", True, (0, 0, 0))  # テキスト設定
+        self.text_enmission_2 = self.font_P.render("Exit", True, (0, 0, 0))  # テキスト設定
+    
+    def draw_background_2(self):
+        
+        self.screen.fill((255, 255, 255))                           # 画面描画
+        self.screen.blit(self.text_location_2, (50, 50))            # テキスト描画
+        self.screen.blit(self.text_jamission_2, (100, 50))          # テキスト描画
+        self.screen.blit(self.text_enmission_2, (400, 55))          # テキスト描画
     
     
 
@@ -198,6 +217,7 @@ class Gameobject:
         self.fade_speed = 5
         
         self.init_object_0()
+        self.init_object_1()
             
     def init_object_0(self):
         
@@ -270,6 +290,7 @@ class Gameobject:
     def init_object_1(self):
         
         # 文字マップ: #=壁, .=通路, S=スタート, G=ゴール
+        # プログラミング基礎の応用をAIさんに教えていただいたので実装してみた
         maze_map = [
             "##################",
             "#S..#........#...#",
@@ -284,7 +305,7 @@ class Gameobject:
             "##################",
         ]
 
-        tile = 75
+        tile = 50
         rows = len(maze_map)
         cols = len(maze_map[0])
         maze_width = cols * tile
@@ -322,6 +343,9 @@ class Gameobject:
             return 0
 
         return 1
+    
+
+        
         
 # ゲーム本体
 class mainGame:
@@ -339,6 +363,12 @@ class mainGame:
         self.object = Gameobject(self.background.screen)
     
     def init_run1(self):
+        
+        self.player = Player()
+        self.background = Background()
+        self.object = Gameobject(self.background.screen)
+    
+    def init_run_2(self):
         
         self.player = Player()
         self.background = Background()
@@ -384,8 +414,7 @@ class mainGame:
         self.init_run1()
         
         Clear_1 = True          # クリアフラグ
-        self.background.init_background_1()
-        self.object.init_object_1()
+        
         self.player.player.center = self.object.start_pos
         self.player.count_key = [0, 0, 0, 0]
         self.player.delta = [0, 0, 0, 0]
@@ -411,6 +440,46 @@ class mainGame:
             pygame.display.flip()
             
             self.clock.tick(60)
+        
+    def run_2(self):
+        
+        self.init_run_2()   
+        
+        Clear_2 = True          # クリアフラグ
+        clear_triggered = False
+        clear_alpha = 0
+        clear_hold_count = 0
+        clear_hold_frames = 30
+        clear_text = self.background.font_H.render("Clear", True, (20, 140, 20)).convert_alpha()
+        clear_rect = clear_text.get_rect(center=self.background.screen.get_rect().center)
+        
+        while Clear_2:
+            
+            self.background.draw_background_2()
+            
+            self.player.draw(self.background.screen, 0)  
+            if not clear_triggered:
+                keys = pygame.key.get_pressed()
+                self.player.move_ice(keys, enable_warp = True, walls = None)
+            else:
+                clear_alpha = min(255, clear_alpha + 8)
+                clear_text.set_alpha(clear_alpha)
+                self.background.screen.blit(clear_text, clear_rect)
+                if clear_alpha >= 255:
+                    clear_hold_count += 1
+                    if clear_hold_count >= clear_hold_frames:
+                        Clear_2 = False
+            
+            # 退出イベント
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    clear_triggered = True
+                    
+            pygame.display.flip()
+            
+            self.clock.tick(60)  
+        
+           
 
 
 # 各クラス呼び出し（本体）
@@ -420,3 +489,4 @@ if __name__ == "__main__":
     
     game.run_0()
     game.run_1()
+    game.run_2()
