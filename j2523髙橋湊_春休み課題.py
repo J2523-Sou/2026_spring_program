@@ -1,3 +1,11 @@
+# J2523 髙橋湊
+# 春休みプログラム課題
+# 玉を動かすゲーム
+
+# 生成AIとのペアプログラミングで作成．
+# 主にクラスの使い方・pygameの使い方・インデント修正などに使用した
+
+
 import pygame
 import sys
 import math
@@ -218,7 +226,8 @@ class Gameobject:
         
         self.init_object_0()
         self.init_object_1()
-            
+        
+        
     def init_object_0(self):
         
         self.alpha_up = 255
@@ -228,6 +237,7 @@ class Gameobject:
         self.alpha_text = 255
         self.clear_wait_count = 0
         
+        # テキストのレンダリングは重いので，初期化関数でまとめて行う
         self.text_jaobject_0 = self.font_jaobject_0.render("移動せよ", True, (0, 0, 0)).convert_alpha()
         self.rect_ja = self.text_jaobject_0.get_rect(center=self.screen_rect.center)
         
@@ -317,6 +327,7 @@ class Gameobject:
         self.goal_rect = pygame.Rect(left, top, tile, tile)
         self.start_pos = (left + tile // 2, top + tile // 2)
 
+        # 描画
         for row_idx, row in enumerate(maze_map):
             for col_idx, cell in enumerate(row):
                 x = left + col_idx * tile
@@ -391,7 +402,7 @@ class mainGame:
             self.background.draw_background_0()
             
             # オブジェクトとプレイヤーを描画する
-            self.player.draw(self.background.screen, 0)
+            self.player.draw(self.background.screen, 1)
             # オブジェクト描画時にクリア判定も一緒に行う（あんまりよくない設計な気がする．．．）
             Clear_0 = self.object.draw_object_0(self.background.screen, self.player.delta, min_clear_move)
             
@@ -458,6 +469,8 @@ class mainGame:
             self.background.draw_background_2()
             
             self.player.draw(self.background.screen, 0)  
+            
+            # クリアしたらテキストをフェードインさせる処理
             if not clear_triggered:
                 keys = pygame.key.get_pressed()
                 self.player.move_ice(keys, enable_warp = True, walls = None)
@@ -470,7 +483,7 @@ class mainGame:
                     if clear_hold_count >= clear_hold_frames:
                         Clear_2 = False
             
-            # 退出イベント
+            # 退出イベント（クリアフラグを立てる）
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     clear_triggered = True
